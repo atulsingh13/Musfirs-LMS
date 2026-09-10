@@ -24,6 +24,11 @@ export function errorHandler(
     } else {
       console.error(err);
     }
+  } else if (!isClientError || req.originalUrl.startsWith("/api/webhooks")) {
+    // Always surface webhook + server faults on Render / production logs
+    console.error(
+      `[${statusCode}] ${req.method} ${req.originalUrl} — ${message}`
+    );
   }
 
   res.status(statusCode).json({

@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { timingSafeEqual } from "crypto";
 import axios from "axios";
+import { env } from "../config/env.js";
 import { Lead } from "../models/Lead.js";
 import { logLeadActivity } from "../services/leadActivity.service.js";
 import { AppError } from "../utils/AppError.js";
@@ -96,6 +97,8 @@ function resolveNameParts(fields: Record<string, string>): {
     "full name",
     "customer_name",
     "customer name",
+    "your_name",
+    "your name",
   ]);
   if (fullName) return splitName(fullName);
 
@@ -122,6 +125,9 @@ function resolveContactNumber(fields: Record<string, string>): string {
     "user phone",
     "user_phone",
     "phone number",
+    "whatsapp",
+    "whatsapp_number",
+    "contact",
   ]);
 }
 
@@ -162,6 +168,23 @@ function resolvePax(fields: Record<string, string>): number {
   ]);
   const n = Number(raw);
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
+
+function graphErrorMessage(error: unknown): string {
+  if (!axios.isAxiosError(error)) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  const data = error.response?.data as
+    | { error?: { message?: string; code?: number; type?: string } }
+    | undefined;
+  const metaMsg = data?.error?.message;
+  const code = data?.error?.code;
+  if (metaMsg) {
+    return code != null
+      ? `Graph API (${code}): ${metaMsg}`
+      : `Graph API: ${metaMsg}`;
+  }
+  return `Graph API HTTP ${error.response?.status ?? "error"}: ${error.message}`;
 }
 
 async function createSystemLead(input: {
@@ -219,7 +242,13 @@ export const verifyMetaWebhook = asyncHandler(
     const mode = String(req.query["hub.mode"] ?? "");
     const token = String(req.query["hub.verify_token"] ?? "");
     const challenge = String(req.query["hub.challenge"] ?? "");
-    const expected = process.env.META_VERIFY_TOKEN ?? "";
+    const expected = env.metaVerifyToken;
+
+    console.log(
+      `[meta-webhook] GET verify mode=${mode || "(empty)"} tokenMatch=${Boolean(
+        expected && token && safeEqual(token, expected)
+      )}`
+    );
 
     if (mode === "subscribe" && expected && safeEqual(token, expected)) {
       res.status(200).send(challenge);
@@ -236,20 +265,30 @@ export const verifyMetaWebhook = asyncHandler(
  */
 export const handleMetaWebhook = asyncHandler(
   async (req: Request, res: Response) => {
-    const accessToken = process.env.META_ACCESS_TOKEN ?? "";
+    const accessToken = env.metaAccessToken;
     if (!accessToken) {
+      console.error(
+        "[meta-webhook] META_ACCESS_TOKEN is not configured on this host"
+      );
       throw new AppError("META_ACCESS_TOKEN is not configured", 500);
     }
 
     const body = (req.body ?? {}) as {
       object?: string;
       entry?: Array<{
+        id?: string;
         changes?: Array<{
           field?: string;
           value?: { leadgen_id?: string; form_id?: string; page_id?: string };
         }>;
       }>;
     };
+
+    console.log(
+      `[meta-webhook] POST received object=${body.object ?? "(none)"} entries=${
+        body.entry?.length ?? 0
+      }`
+    );
 
     const leadgenIds = new Set<string>();
     for (const entry of body.entry ?? []) {
@@ -259,7 +298,6 @@ export const handleMetaWebhook = asyncHandler(
       }
     }
 
-    // Fallback for the common single-event shape described in the brief
     if (leadgenIds.size === 0) {
       const nestedId = String(
         body?.entry?.[0]?.changes?.[0]?.value?.leadgen_id ?? ""
@@ -268,30 +306,72 @@ export const handleMetaWebhook = asyncHandler(
     }
 
     if (leadgenIds.size === 0) {
-      // Acknowledge empty/noise payloads so Meta does not retry forever
+      console.warn(
+        "[meta-webhook] No leadgen_id in payload — dashboard Test may send empty body"
+      );
       res.status(200).json({ success: true, message: "No leadgen_id found" });
       return;
     }
 
+    console.log(
+      `[meta-webhook] Processing leadgen_ids=${[...leadgenIds].join(",")}`
+    );
+
     const created: string[] = [];
 
     for (const leadgenId of leadgenIds) {
-      const { data } = await axios.get<{
+      let data: {
         id?: string;
         field_data?: MetaFieldDatum[];
         created_time?: string;
-      }>(`https://graph.facebook.com/v26.0/${leadgenId}`, {
-        params: { access_token: accessToken },
-        timeout: 15_000,
-      });
+      };
+
+      try {
+        const response = await axios.get<typeof data>(
+          `https://graph.facebook.com/v26.0/${leadgenId}`,
+          {
+            params: { access_token: accessToken },
+            timeout: 15_000,
+          }
+        );
+        data = response.data;
+      } catch (error) {
+        const message = graphErrorMessage(error);
+        console.error(
+          `[meta-webhook] Failed to fetch leadgen_id=${leadgenId}: ${message}`
+        );
+        throw new AppError(
+          `Failed to fetch Meta lead ${leadgenId}: ${message}`,
+          502
+        );
+      }
 
       const fields = mapMetaFieldData(data.field_data);
-      const { firstName, lastName } = resolveNameParts(fields);
-      const contactNumber = resolveContactNumber(fields);
+      const fieldKeys = Object.keys(fields);
+      console.log(
+        `[meta-webhook] leadgen_id=${leadgenId} fields=[${fieldKeys.join(", ")}]`
+      );
+
+      let { firstName, lastName } = resolveNameParts(fields);
+      let contactNumber = resolveContactNumber(fields);
       const email = resolveEmail(fields);
       const city = resolveCity(fields);
       const destination = resolveDestination(fields);
       const pax = resolvePax(fields);
+
+      // Keep CRM usable when Instant Form uses non-standard labels
+      if (!firstName && email) {
+        firstName = email.split("@")[0] || "Meta";
+      }
+      if (!firstName) {
+        firstName = "Meta Lead";
+      }
+      if (!contactNumber) {
+        contactNumber = "pending";
+        console.warn(
+          `[meta-webhook] leadgen_id=${leadgenId} missing phone; saved with contactNumber=pending. keys=[${fieldKeys.join(", ")}]`
+        );
+      }
 
       const formId = String(
         body?.entry?.[0]?.changes?.[0]?.value?.form_id ?? ""
@@ -311,6 +391,9 @@ export const handleMetaWebhook = asyncHandler(
       });
 
       created.push(String(lead._id));
+      console.log(
+        `[meta-webhook] Created lead id=${lead._id} for leadgen_id=${leadgenId}`
+      );
     }
 
     res.status(200).json({
@@ -327,7 +410,7 @@ export const handleMetaWebhook = asyncHandler(
  */
 export const handleGoogleWebhook = asyncHandler(
   async (req: Request, res: Response) => {
-    const expected = process.env.GOOGLE_WEBHOOK_KEY ?? "";
+    const expected = env.googleWebhookKey;
     const provided = String(req.headers["google-key"] ?? "");
 
     if (!expected || !safeEqual(provided, expected)) {
