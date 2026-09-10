@@ -1,0 +1,21 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env secrets (keep per-app .env.example)
+.env
+.env.local
+.env.*.local
+
+# Dependencies & build output
+node_modules/
+frontend/dist/
+backend/dist/
+coverage/
