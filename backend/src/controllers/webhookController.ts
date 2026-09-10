@@ -280,7 +280,7 @@ export const handleMetaWebhook = asyncHandler(
         id?: string;
         field_data?: MetaFieldDatum[];
         created_time?: string;
-      }>(`https://graph.facebook.com/v18.0/${leadgenId}`, {
+      }>(`https://graph.facebook.com/v26.0/${leadgenId}`, {
         params: { access_token: accessToken },
         timeout: 15_000,
       });
