@@ -328,8 +328,8 @@ export function BookingsPage() {
       }
     >
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative w-full max-w-md">
+        <div className="flex flex-col gap-3">
+          <div className="relative w-full lg:max-w-md">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
@@ -339,7 +339,7 @@ export function BookingsPage() {
             />
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
             <Select
               value={statusFilter}
               onValueChange={(value) => {
@@ -403,7 +403,7 @@ export function BookingsPage() {
                       type="button"
                       variant="outline"
                       disabled={isExporting}
-                      className="border border-white/20 bg-white/10 text-foreground transition-all hover:bg-white/20 dark:text-white"
+                      className="w-full border border-white/20 bg-white/10 text-foreground transition-all hover:bg-white/20 sm:w-auto dark:text-white"
                     >
                       <Download className="size-4" />
                       Export
@@ -429,156 +429,265 @@ export function BookingsPage() {
           </div>
         </div>
 
-        <div className="glass-panel no-scrollbar min-h-0 flex-1 overflow-x-auto rounded-xl">
+        <div className="glass-panel no-scrollbar min-h-0 flex-1 overflow-hidden rounded-xl">
           {isLoading ? (
-            <div className="p-4">
-              <TableSkeleton rows={8} columns={8} />
+            <>
+              <div className="space-y-2 p-3 md:hidden">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-28 animate-pulse rounded-xl border border-white/15 bg-white/10"
+                  />
+                ))}
+              </div>
+              <div className="hidden p-4 md:block">
+                <TableSkeleton rows={8} columns={8} />
+              </div>
+            </>
+          ) : bookings.length === 0 ? (
+            <div className="flex min-h-[200px] items-center justify-center px-4 py-10">
+              <p className="text-center text-sm text-muted-foreground">
+                No bookings match your filters.
+              </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-white/15 bg-white/10 hover:bg-white/10 dark:border-white/10 dark:bg-white/5">
-                  <TableHead className="text-muted-foreground">
-                    Reference ID
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Customer
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Package & Total
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Paid Amount
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Balance
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Travel Date & Pax
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Payment Status
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Booking Status
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bookings.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="h-28 text-center text-muted-foreground"
-                    >
-                      No bookings match your filters.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  bookings.map((booking) => {
-                    const contactLine =
-                      booking.email ||
-                      booking.contact_number ||
-                      booking.contactNumber ||
-                      "—";
-                    const packageTitle =
-                      booking.package_title || booking.packageTitle || "—";
-                    const totalAmount =
-                      booking.total_amount_inr ?? booking.totalAmountInr ?? 0;
-                    const paidAmount = booking.advance_amount_inr ?? 0;
-                    const balanceAmount = booking.balance_amount_inr ?? 0;
+            <>
+              {/* Mobile cards */}
+              <div className="space-y-2 overflow-y-auto p-3 md:hidden">
+                {bookings.map((booking) => {
+                  const contactLine =
+                    booking.email ||
+                    booking.contact_number ||
+                    booking.contactNumber ||
+                    "—";
+                  const packageTitle =
+                    booking.package_title || booking.packageTitle || "—";
+                  const totalAmount =
+                    booking.total_amount_inr ?? booking.totalAmountInr ?? 0;
+                  const paidAmount = booking.advance_amount_inr ?? 0;
+                  const balanceAmount = booking.balance_amount_inr ?? 0;
+                  const pax =
+                    booking.number_of_pax ?? booking.numberOfPax ?? 1;
+                  const paymentStatus =
+                    booking.payment_status || booking.paymentStatus || "—";
 
-                    return (
-                      <TableRow
-                        key={booking._id}
-                        className="border-white/10 hover:bg-white/10 dark:hover:bg-white/5"
-                      >
-                        <TableCell>
-                          <span className="font-semibold tracking-tight text-foreground">
+                  return (
+                    <article
+                      key={booking._id}
+                      className="rounded-xl border border-white/15 bg-white/10 p-3 backdrop-blur-md dark:border-white/10 dark:bg-white/5"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold tracking-tight text-foreground">
                             {booking.reference || "—"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="min-w-[160px]">
-                            <p className="font-medium text-foreground">
-                              {booking.name || "—"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {contactLine}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <div className="min-w-[180px]">
-                            <div className="text-sm font-medium text-foreground">
-                              {packageTitle}
-                            </div>
-                            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>{booking.destination || "—"}</span>
-                              <span className="size-1 shrink-0 rounded-full bg-white/30 dark:bg-gray-500" />
-                              <span className="font-semibold tabular-nums text-foreground/80 dark:text-gray-200">
-                                ₹{totalAmount.toLocaleString("en-IN")}
-                              </span>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm tabular-nums text-foreground/70 dark:text-gray-300">
-                          ₹{paidAmount.toLocaleString("en-IN")}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm tabular-nums">
-                          <span
-                            className={
-                              balanceAmount > 0
-                                ? "font-medium text-red-500/90 dark:text-red-400"
-                                : "text-muted-foreground dark:text-gray-400"
-                            }
-                          >
-                            ₹{balanceAmount.toLocaleString("en-IN")}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="min-w-[120px]">
-                            <p className="text-sm text-foreground">
-                              {formatTravelDate(
-                                booking.travel_date || booking.travelDate
-                              )}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {booking.number_of_pax ??
-                                booking.numberOfPax ??
-                                1}{" "}
-                              pax
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
+                          </p>
+                          <p className="mt-0.5 truncate font-medium text-foreground">
+                            {booking.name || "—"}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {contactLine}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
                           <GlassBadge
-                            label={
-                              booking.payment_status ||
-                              booking.paymentStatus ||
-                              "—"
-                            }
-                            className={paymentBadgeClass(
-                              booking.payment_status ||
-                                booking.paymentStatus ||
-                                ""
-                            )}
+                            label={paymentStatus}
+                            className={paymentBadgeClass(paymentStatus)}
                           />
-                        </TableCell>
-                        <TableCell>
                           <GlassBadge
                             label={booking.status || "—"}
                             className={bookingStatusBadgeClass(
                               booking.status || ""
                             )}
                           />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="min-w-0 flex-1 text-sm font-medium text-foreground">
+                            {packageTitle}
+                          </p>
+                          <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                            ₹{totalAmount.toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {booking.destination || "—"}
+                        </p>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          <span>
+                            {formatTravelDate(
+                              booking.travel_date || booking.travelDate
+                            )}
+                          </span>
+                          <span>·</span>
+                          <span>{pax} pax</span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs tabular-nums">
+                          <span className="text-muted-foreground">
+                            Paid{" "}
+                            <span className="font-medium text-foreground">
+                              ₹{paidAmount.toLocaleString("en-IN")}
+                            </span>
+                          </span>
+                          <span
+                            className={
+                              balanceAmount > 0
+                                ? "text-red-500/90 dark:text-red-400"
+                                : "text-muted-foreground"
+                            }
+                          >
+                            Balance{" "}
+                            <span className="font-medium">
+                              ₹{balanceAmount.toLocaleString("en-IN")}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden min-h-0 flex-1 overflow-x-auto md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-white/15 bg-white/10 hover:bg-white/10 dark:border-white/10 dark:bg-white/5">
+                      <TableHead className="text-muted-foreground">
+                        Reference ID
+                      </TableHead>
+                      <TableHead className="text-muted-foreground">
+                        Customer
+                      </TableHead>
+                      <TableHead className="text-muted-foreground">
+                        Package & Total
+                      </TableHead>
+                      <TableHead className="text-muted-foreground">
+                        Paid Amount
+                      </TableHead>
+                      <TableHead className="text-muted-foreground">
+                        Balance
+                      </TableHead>
+                      <TableHead className="text-muted-foreground">
+                        Travel Date & Pax
+                      </TableHead>
+                      <TableHead className="text-muted-foreground">
+                        Payment Status
+                      </TableHead>
+                      <TableHead className="text-muted-foreground">
+                        Booking Status
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bookings.map((booking) => {
+                      const contactLine =
+                        booking.email ||
+                        booking.contact_number ||
+                        booking.contactNumber ||
+                        "—";
+                      const packageTitle =
+                        booking.package_title || booking.packageTitle || "—";
+                      const totalAmount =
+                        booking.total_amount_inr ??
+                        booking.totalAmountInr ??
+                        0;
+                      const paidAmount = booking.advance_amount_inr ?? 0;
+                      const balanceAmount = booking.balance_amount_inr ?? 0;
+
+                      return (
+                        <TableRow
+                          key={booking._id}
+                          className="border-white/10 hover:bg-white/10 dark:hover:bg-white/5"
+                        >
+                          <TableCell>
+                            <span className="font-semibold tracking-tight text-foreground">
+                              {booking.reference || "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="min-w-[160px]">
+                              <p className="font-medium text-foreground">
+                                {booking.name || "—"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {contactLine}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <div className="min-w-[180px]">
+                              <div className="text-sm font-medium text-foreground">
+                                {packageTitle}
+                              </div>
+                              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>{booking.destination || "—"}</span>
+                                <span className="size-1 shrink-0 rounded-full bg-white/30 dark:bg-gray-500" />
+                                <span className="font-semibold tabular-nums text-foreground/80 dark:text-gray-200">
+                                  ₹{totalAmount.toLocaleString("en-IN")}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-sm tabular-nums text-foreground/70 dark:text-gray-300">
+                            ₹{paidAmount.toLocaleString("en-IN")}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-sm tabular-nums">
+                            <span
+                              className={
+                                balanceAmount > 0
+                                  ? "font-medium text-red-500/90 dark:text-red-400"
+                                  : "text-muted-foreground dark:text-gray-400"
+                              }
+                            >
+                              ₹{balanceAmount.toLocaleString("en-IN")}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="min-w-[120px]">
+                              <p className="text-sm text-foreground">
+                                {formatTravelDate(
+                                  booking.travel_date || booking.travelDate
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {booking.number_of_pax ??
+                                  booking.numberOfPax ??
+                                  1}{" "}
+                                pax
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <GlassBadge
+                              label={
+                                booking.payment_status ||
+                                booking.paymentStatus ||
+                                "—"
+                              }
+                              className={paymentBadgeClass(
+                                booking.payment_status ||
+                                  booking.paymentStatus ||
+                                  ""
+                              )}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <GlassBadge
+                              label={booking.status || "—"}
+                              className={bookingStatusBadgeClass(
+                                booking.status || ""
+                              )}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </div>
 
@@ -586,7 +695,7 @@ export function BookingsPage() {
           <p className="text-xs text-muted-foreground">
             Showing {from}-{to} of {total}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
             <Button
               type="button"
               variant="outline"
@@ -596,7 +705,7 @@ export function BookingsPage() {
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             >
               <ChevronLeft className="size-4" />
-              Previous
+              <span className="sm:inline">Previous</span>
             </Button>
             <span className="text-xs tabular-nums text-muted-foreground">
               Page {page} / {Math.max(pages, 1)}
@@ -609,7 +718,7 @@ export function BookingsPage() {
               disabled={page >= pages || isLoading || total === 0}
               onClick={() => setPage((prev) => prev + 1)}
             >
-              Next
+              <span className="sm:inline">Next</span>
               <ChevronRight className="size-4" />
             </Button>
           </div>
