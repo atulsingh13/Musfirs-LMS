@@ -1,1 +1,4 @@
+# Render does NOT use this file for routing (Netlify-only format).
+# Kept for other hosts. On Render use Dashboard Redirects/Rewrites or render.yaml:
+#   Source: /*    Destination: /index.html    Action: Rewrite
 /*    /index.html   200

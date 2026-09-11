@@ -87,7 +87,21 @@ npm run build
 
 Serve `frontend/dist/` with any static host (nginx, Cloudflare Pages, S3+CDN, etc.).
 
-**SPA fallback:** all unknown routes must serve `index.html`.
+**SPA fallback (required on Render):** React Router paths like `/bookings` must serve `index.html`.
+
+Render does **not** honor Netlify `_redirects`. Do one of these:
+
+1. **Static Site (recommended)** — Dashboard → your frontend → **Redirects/Rewrites** → Add:
+   - Source: `/*`
+   - Destination: `/index.html`
+   - Action: **Rewrite** (not Redirect)
+   Then save and redeploy.
+
+2. **Or** Web Service instead of Static Site:
+   - Build: `npm ci && npm run build`
+   - Start: `npm start` (uses `serve -s dist`, SPA-safe)
+
+3. Blueprint: see root `render.yaml` (`routes` rewrite).
 
 Example nginx snippet:
 

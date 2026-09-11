@@ -1,0 +1,25 @@
+# Render Blueprint — SPA rewrite is required for React Router.
+# Existing Static Sites: also add the same rule in Dashboard → Redirects/Rewrites
+# (Render does NOT honor Netlify-style public/_redirects).
+
+services:
+  - type: web
+    name: musfirs-lms-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: web
+    name: musfirs-lms-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
