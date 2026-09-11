@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { AppToaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/context/auth-context";
@@ -41,13 +41,14 @@ export default function App() {
       },
       body: JSON.stringify({
         sessionId: "73a298",
-        runId: "pre-fix",
-        hypothesisId: "D",
+        runId: "post-fix",
+        hypothesisId: "A",
         location: "frontend/src/App.tsx:App",
-        message: "App render with BrowserRouter",
+        message: "App render with HashRouter",
         data: {
           pathname: window.location.pathname,
-          routerType: "BrowserRouter",
+          hash: window.location.hash,
+          routerType: "HashRouter",
         },
         timestamp: Date.now(),
       }),
@@ -59,7 +60,7 @@ export default function App() {
     <ThemeProvider>
       <GradientBackground />
       <AppToaster />
-      <BrowserRouter>
+      <HashRouter>
         <AuthProvider>
           <NotificationProvider>
           <TooltipProvider>
@@ -155,7 +156,7 @@ export default function App() {
           </TooltipProvider>
           </NotificationProvider>
         </AuthProvider>
-      </BrowserRouter>
+      </HashRouter>
     </ThemeProvider>
   );
 }

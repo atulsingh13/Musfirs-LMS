@@ -107,11 +107,14 @@ function forceLogoutRedirect() {
   } catch {
     // ignore storage errors
   }
-  if (
-    typeof window !== "undefined" &&
-    !window.location.pathname.startsWith("/login")
-  ) {
-    window.location.href = "/login";
+  if (typeof window !== "undefined") {
+    const hashPath = window.location.hash.replace(/^#/, "") || "/";
+    const onLogin =
+      hashPath.startsWith("/login") ||
+      window.location.pathname.startsWith("/login");
+    if (!onLogin) {
+      window.location.hash = "#/login";
+    }
   }
 }
 

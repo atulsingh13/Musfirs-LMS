@@ -12,15 +12,17 @@ fetch("http://127.0.0.1:7245/ingest/8e23b003-f8b6-4cc6-ba2c-068d5409bacc", {
   },
   body: JSON.stringify({
     sessionId: "73a298",
-    runId: "pre-fix",
+    runId: "post-fix",
     hypothesisId: "C",
     location: "frontend/src/main.tsx:boot",
     message: "React app boot",
     data: {
       pathname: window.location.pathname,
+      hash: window.location.hash,
       search: window.location.search,
       href: window.location.href,
       hasRoot: Boolean(document.getElementById("root")),
+      routerExpected: "HashRouter",
     },
     timestamp: Date.now(),
   }),
