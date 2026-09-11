@@ -31,6 +31,30 @@ function LegacyRedirect({ to }: { to: string }) {
 }
 
 export default function App() {
+  // #region agent log
+  if (typeof window !== "undefined") {
+    fetch("http://127.0.0.1:7245/ingest/8e23b003-f8b6-4cc6-ba2c-068d5409bacc", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "73a298",
+      },
+      body: JSON.stringify({
+        sessionId: "73a298",
+        runId: "pre-fix",
+        hypothesisId: "D",
+        location: "frontend/src/App.tsx:App",
+        message: "App render with BrowserRouter",
+        data: {
+          pathname: window.location.pathname,
+          routerType: "BrowserRouter",
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
+
   return (
     <ThemeProvider>
       <GradientBackground />
